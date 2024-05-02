@@ -14,7 +14,6 @@ const validatePaymentInput = (data) => {
   data.email = !isEmpty(data.email) ? data.email : "";
   data.address = !isEmpty(data.address) ? data.address : "";
   data.name = !isEmpty(data.name) ? data.name : "";
-  data.amount = !isEmpty(data.amount) ? data.amount : "";
 
   if (validator.isEmpty(data.card_number)) {
     error.card_number = "card_number field is Required";
@@ -45,11 +44,8 @@ const validatePaymentInput = (data) => {
   if (validator.isEmpty(data.name)) {
     error.name = "name field is required";
   }
-  if (validator.isEmpty(data.amount)) {
-    error.amount = "amount field is required";
-  }
-  if (!validator.isNumeric(data.amount)) {
-    error.amount = "amount field is required";
+  if (!Number(data.amount)) {
+    error.amount = "amount field must be a number";
   }
   return {
     error,

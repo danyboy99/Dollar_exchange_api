@@ -55,13 +55,13 @@ const profile = (req, res) => {
 const addToAvaliableBalance = async (req, res) => {
   try {
     const { amount } = req.body;
-    const { error, isValid } = validateAmount(req.body);
+    const { error, errorStatus } = validateAmount(req.body);
     // check validation
-    if (!isValid) {
+    if (errorStatus) {
       return res.status(400).json(error);
     }
     let product = await Product.index();
-    product.availableDollarBalance += amount;
+    product.availableDollarBalance += Number(amount);
     product.save().then((data) => {
       res.json({
         status: "success",
@@ -80,13 +80,13 @@ const addToAvaliableBalance = async (req, res) => {
 const removeFromAvaliableBalance = async (req, res) => {
   try {
     const { amount } = req.body;
-    const { error, isValid } = validateAmount(req.body);
+    const { error, errorStatus } = validateAmount(req.body);
     // check validation
-    if (!isValid) {
+    if (errorStatus) {
       return res.status(400).json(error);
     }
     let product = await Product.index();
-    product.availableDollarBalance -= amount;
+    product.availableDollarBalance -= Number(amount);
     product.save().then((data) => {
       res.json({
         status: "success",
@@ -105,16 +105,17 @@ const removeFromAvaliableBalance = async (req, res) => {
 const changeNairaRate = async (req, res) => {
   try {
     const { rate } = req.body;
+    //validate input
     const validate = {
       amount: rate,
     };
-    const { error, isValid } = validateAmount(validate);
+    const { error, errorStatus } = validateAmount(validate);
     // check validation
-    if (!isValid) {
+    if (errorStatus) {
       return res.status(400).json(error);
     }
     let product = await Product.index();
-    product.nairaRate = rate;
+    product.nairaRate = Number(rate);
     product.save().then((data) => {
       res.json({
         status: "success",

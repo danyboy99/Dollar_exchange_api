@@ -84,7 +84,6 @@ const placeOrder = async (req, res) => {
     if (!isValid) {
       return res.status(400).json(error);
     }
-
     const {
       card_number,
       card_cvv,
@@ -120,7 +119,7 @@ const placeOrder = async (req, res) => {
       expiry_month: card_exp_month,
       expiry_year: card_exp_year,
       currency: "NGN",
-      amount,
+      amount: Number(amount),
       fullname: name,
       email: email,
       phone_number: "09000000000",
@@ -143,7 +142,7 @@ const placeOrder = async (req, res) => {
       let paymentFlw_ref = reCallCharge.data.flw_ref;
       const nairaRate = await Product.nairaRate();
       const amountInNaira = amount * nairaRate;
-      const placeOrder = await Order.create(
+      await Order.create(
         user,
         amount,
         amountInNaira,
@@ -194,8 +193,9 @@ const checkOut = async (req, res) => {
       otp: otp,
       flw_ref: flw_ref,
     });
+
     if (callValidate.status === "success") {
-      const userPendingOrder = await Order.findUserPending(user);
+      let userPendingOrder = await Order.findUserPending(user);
       userPendingOrder.paymentRecieve = true;
       await userPendingOrder.save();
       return res.json({
