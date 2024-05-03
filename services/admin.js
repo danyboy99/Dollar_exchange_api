@@ -27,26 +27,16 @@ const create = async (firstname, lastname, email, password) => {
   }
 };
 const signToken = (user) => {
-  return jwt.sign(
-    {
-      iss: "Danilo",
-      sub: user._id,
-      iat: new Date().getTime(), //current time
-      exp: new Date().setDate(new Date().getDate() + 1), // current time plus 1 day ahead
-    },
-    jwt_secret
-  );
+  const payload = {
+    user: user._id,
+    email: user.email,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 2,
+  };
+  return jwt.sign(payload, jwt_secret);
 };
 const findOneByEmail = async (email) => {
   try {
     const admin = await Admin.findOne({ email: email });
-    if (!admin) {
-      const noAdmin = {
-        status: "error",
-        msg: "no Admin found",
-      };
-      return noAdmin;
-    }
 
     return admin;
   } catch (err) {
@@ -62,11 +52,7 @@ const findById = async (id) => {
   try {
     const user = await Admin.findById(id);
     if (!user) {
-      const noAdmin = {
-        status: "error",
-        msg: "no Admin found",
-      };
-      return noAdmin;
+      return false;
     }
     let foundUser = {
       _id: user._id,

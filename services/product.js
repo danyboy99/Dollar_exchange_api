@@ -57,9 +57,74 @@ const availableDollarBalance = async () => {
     return error;
   }
 };
+
+const changeNairaRate = async (rate) => {
+  try {
+    const product = await Product.findOne({ account: "main" });
+    product.nairaRate = Number(rate);
+    await product.save();
+    return product;
+  } catch (err) {
+    const error = {
+      status: "error",
+      msg: err.message,
+      error: err,
+    };
+    return error;
+  }
+};
+const updateLockBalance = async (amount, update) => {
+  try {
+    if (update === "add") {
+      const product = await Product.findOne({ account: "main" });
+      product.lockedDollarBalance += Number(amount);
+      await product.save();
+      return product;
+    }
+    if (update === "remove") {
+      const product = await Product.findOne({ account: "main" });
+      product.lockedDollarBalance -= Number(amount);
+      await product.save();
+      return product;
+    }
+  } catch (err) {
+    const error = {
+      status: "error",
+      msg: err.message,
+      error: err,
+    };
+    return error;
+  }
+};
+const updateDollarBalance = async (amount, update) => {
+  try {
+    if (update === "add") {
+      const product = await Product.findOne({ account: "main" });
+      product.availableDollarBalance += Number(amount);
+      await product.save();
+      return product;
+    }
+    if (update === "remove") {
+      const product = await Product.findOne({ account: "main" });
+      product.availableDollarBalance -= Number(amount);
+      await product.save();
+      return product;
+    }
+  } catch (err) {
+    const error = {
+      status: "error",
+      msg: err.message,
+      error: err,
+    };
+    return error;
+  }
+};
 module.exports = {
   productInit,
   index,
   nairaRate,
   availableDollarBalance,
+  changeNairaRate,
+  updateLockBalance,
+  updateDollarBalance,
 };

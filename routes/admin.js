@@ -1,6 +1,7 @@
 const express = require("express");
 const adminController = require("../controller/admin.js");
 const productController = require("../controller/product.js");
+const validateToken = require("../config/tokenValidation.js");
 const router = express.Router();
 const passport = require("passport");
 
@@ -9,60 +10,49 @@ router.get("/", (req, res) => {
 });
 
 router.post("/create/j21", adminController.signup);
-router.post(
-  "/login",
-  passport.authenticate("adminLogin", { session: false }),
-  adminController.login
-);
+router.post("/login", adminController.login);
 
-router.get(
-  "/profile",
-  passport.authenticate("adminValidate", { session: false }),
-  adminController.profile
-);
+router.get("/profile", validateToken.signAdmin, adminController.profile);
 router.get(
   "/productinit",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   productController.initializeProduct
 );
 router.post(
   "/addtobalance",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   adminController.addToAvaliableBalance
 );
 
 router.post(
   "/removefrombalance",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   adminController.removeFromAvaliableBalance
 );
 
 router.post(
   "/changenairarate",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   adminController.changeNairaRate
 );
 
 router.get(
   "/pendingorders",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   adminController.getPendingOrders
 );
 
-router.get(
-  "/allorders",
-  passport.authenticate("adminValidate", { session: false }),
-  adminController.getAllOrders
-);
+router.get("/allorders", validateToken.signAdmin, adminController.getAllOrders);
 
 router.post(
   "/approvependingorder",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   adminController.approvePendingOrder
 );
 router.post(
   "/declinependingorder",
-  passport.authenticate("adminValidate", { session: false }),
+  validateToken.signAdmin,
   adminController.declinePendingOrder
 );
+router.post("/testtoken", validateToken.signAdmin, adminController.testToken);
 module.exports = router;

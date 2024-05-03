@@ -104,6 +104,42 @@ const findAllOrders = async () => {
     return error;
   }
 };
+const updateOrderStatus = async (user, update) => {
+  try {
+    const userPendingOrder = await Order.findOne({
+      user: user,
+      orderStatus: "pending",
+    });
+    userPendingOrder.orderStatus = update;
+    await userPendingOrder.save();
+    return userPendingOrder;
+  } catch (err) {
+    const error = {
+      status: "error",
+      msg: err.message,
+      error: err,
+    };
+    return error;
+  }
+};
+const updatePaymentStatus = async (user, update) => {
+  try {
+    const userPendingOrder = await Order.findOne({
+      user: user,
+      orderStatus: "pending",
+    });
+    userPendingOrder.paymentRecieve = update;
+    await userPendingOrder.save();
+    return userPendingOrder;
+  } catch (err) {
+    const error = {
+      status: "error",
+      msg: err.message,
+      error: err,
+    };
+    return error;
+  }
+};
 module.exports = {
   create,
   findByUser,
@@ -111,4 +147,6 @@ module.exports = {
   findPendingOrders,
   deleteOrder,
   findAllOrders,
+  updateOrderStatus,
+  updatePaymentStatus,
 };

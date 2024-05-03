@@ -19,7 +19,7 @@ const signup = async (req, res) => {
     return res.status(400).json(error);
   }
   const adminAlreadyExist = await Admin.findOneByEmail(email);
-  if (adminAlreadyExist.email) {
+  if (adminAlreadyExist) {
     return res.json({
       status: "Fail!!",
       msg: "admin already exist with this email try Login",
@@ -32,20 +32,13 @@ const signup = async (req, res) => {
   }
 
   const signtoken = Admin.signToken(createdAdmin);
-  res.json({
+  return res.json({
     status: "success",
     msg: "Admin created",
-    userToken: "Bearer " + signtoken,
+    userToken: signtoken,
   });
 };
-const login = (req, res) => {
-  const token = Admin.signToken(req.user);
-  res.json({
-    status: "success",
-    msg: "Login successful!!",
-    token: "Bearer " + token,
-  });
-};
+
 const profile = (req, res) => {
   res.json({
     msg: "admin profile",
@@ -60,14 +53,13 @@ const addToAvaliableBalance = async (req, res) => {
     if (errorStatus) {
       return res.status(400).json(error);
     }
-    let product = await Product.index();
-    product.availableDollarBalance += Number(amount);
-    product.save().then((data) => {
-      res.json({
-        status: "success",
-        msg: "avalableDollarBalance Updated successfuly",
-        product: data,
-      });
+
+    const balanceUpdate = await Product.updateDollarBalance(amount, "add");
+    console.log("balance", balanceUpdate);
+    res.json({
+      status: "success",
+      msg: "avalableDollarBalance Updated successfuly",
+      product: balanceUpdate,
     });
   } catch (err) {
     res.json({
@@ -85,9 +77,8 @@ const removeFromAvaliableBalance = async (req, res) => {
     if (errorStatus) {
       return res.status(400).json(error);
     }
-    let product = await Product.index();
-    product.availableDollarBalance -= Number(amount);
-    product.save().then((data) => {
+
+    Product.updateDollarBalance(amount, "remove").then((data) => {
       res.json({
         status: "success",
         msg: "avalableDollarBalance Updated successfuly",
@@ -114,9 +105,8 @@ const changeNairaRate = async (req, res) => {
     if (errorStatus) {
       return res.status(400).json(error);
     }
-    let product = await Product.index();
-    product.nairaRate = Number(rate);
-    product.save().then((data) => {
+
+    Product.changeNairaRate(rate).then((data) => {
       res.json({
         status: "success",
         msg: "naira rate Updated successfuly",
@@ -147,7 +137,6 @@ const approvePendingOrder = async (req, res) => {
   try {
     const { user } = req.body;
     const userPendingOrder = await Order.findUserPending(user);
-    const product = await Product.index();
     // if no pending order found
     if (!userPendingOrder) {
       return res.json({
@@ -160,11 +149,12 @@ const approvePendingOrder = async (req, res) => {
       id: userPendingOrder.paymentId,
     });
     if (verifytransaction.status == "success") {
-      userPendingOrder.orderStatus = "success";
-      product.lockedDollarBalance -= userPendingOrder.amountInDollar;
-      await product.save();
-      userPendingOrder.save().then((data) => {
-        res.json({
+      await Product.updateLockBalance(
+        userPendingOrder.amountInDollar,
+        "remove"
+      );
+      Order.updateOrderStatus(user, "success").then((data) => {
+        return res.json({
           status: "success",
           msg: "payment approved successfuly !",
           order: data,
@@ -189,7 +179,6 @@ const declinePendingOrder = async (req, res) => {
   try {
     const { user } = req.body;
     const userPendingOrder = await Order.findUserPending(user);
-    const product = await Product.index();
     // if no pending order found
     if (!userPendingOrder) {
       return res.json({
@@ -197,14 +186,13 @@ const declinePendingOrder = async (req, res) => {
         msg: "no pending orders for this user",
       });
     }
-    userPendingOrder.orderStatus = "failed";
-    product.lockedDollarBalance -= userPendingOrder.amountInDollar;
-    product.availableDollarBalance += userPendingOrder.amountInDollar;
-    await product.save();
-    userPendingOrder.save().then((data) => {
-      res.json({
+
+    await Product.updateLockBalance(userPendingOrder.amountInDollar, "remove");
+    await Product.updateDollarBalance(userPendingOrder.amountInDollar, "add");
+    Order.updateOrderStatus(user, "failed").then((data) => {
+      return res.json({
         status: "success",
-        msg: "payment approved successfuly !",
+        msg: "payment declined!",
         order: data,
       });
     });
@@ -242,7 +230,45 @@ const getAllOrders = async (req, res) => {
     });
   }
 };
-
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const foundUser = await Admin.findOneByEmail(email);
+    console.log("found admin:", foundUser);
+    if (foundUser) {
+      const validatePassword = await foundUser.PasswordValid(password);
+      console.log("isPasswordValid:", validatePassword);
+      if (validatePassword) {
+        return res.json({
+          status: "success",
+          msg: "Login successfuly",
+          token: Admin.signToken(foundUser),
+        });
+      } else {
+        return res.json({
+          status: "falied",
+          msg: "password not currect",
+        });
+      }
+    } else {
+      return res.json({
+        status: "failed",
+        msg: "no user with this email try signin up",
+      });
+    }
+  } catch (err) {
+    return res.json({
+      status: "error",
+      msg: err.message,
+    });
+  }
+};
+const testToken = (req, res) => {
+  return res.json({
+    msg: "testing",
+    foundUser: req.user,
+  });
+};
 module.exports = {
   signup,
   login,
@@ -255,4 +281,5 @@ module.exports = {
   approvePendingOrder,
   declinePendingOrder,
   deletePendingOrder,
+  testToken,
 };

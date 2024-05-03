@@ -20,7 +20,6 @@ const signUp = async (req, res) => {
       return res.status(400).json(error);
     }
     const userAlreadyExist = await User.findOneByEmail(email);
-    console.log(userAlreadyExist);
     if (userAlreadyExist) {
       return res.json({
         status: "Fail!!",
@@ -41,37 +40,22 @@ const signUp = async (req, res) => {
     }
 
     const signToken = User.signToken(createdUser);
-    res.json({
+    return res.json({
       status: "success",
       msg: "user created",
-      userToken: "Bearer " + signToken,
+      userToken: signToken,
     });
   } catch (err) {
-    res.json({
+    return res.json({
       status: "error",
       msg: err.message,
     });
   }
 };
 
-const login = (req, res) => {
-  try {
-    const token = User.signToken(req.user);
-    res.json({
-      status: "success",
-      msg: "Login successful!!",
-      token: "Bearer " + token,
-    });
-  } catch (err) {
-    res.json({
-      status: "error",
-      msg: err.message,
-    });
-  }
-};
 const profile = async (req, res) => {
   const user = await User.findById(req.user._id);
-  res.json({
+  return res.json({
     status: "working on it ",
     msg: "working on it !!",
     user: user,
@@ -137,6 +121,8 @@ const placeOrder = async (req, res) => {
         pin: card_pin,
       };
       const reCallCharge = await flw.Charge.card(payload2);
+      //if failed
+
       let paymentId = reCallCharge.data.id;
       let paymentTx_ref = reCallCharge.data.tx_ref;
       let paymentFlw_ref = reCallCharge.data.flw_ref;
@@ -150,10 +136,8 @@ const placeOrder = async (req, res) => {
         paymentFlw_ref,
         paymentTx_ref
       );
-      const product = await Product.index();
-      product.availableDollarBalance -= amount;
-      product.lockedDollarBalance += amount;
-      await product.save();
+      await Product.updateDollarBalance(amount, "remove");
+      await Product.updateLockBalance(amount, "add");
       return res.json({
         status: "pending",
         msg: `${reCallCharge.data.processor_response}`,
@@ -174,7 +158,7 @@ const placeOrder = async (req, res) => {
       });
     }
   } catch (err) {
-    res.json({
+    return res.json({
       status: "error",
       msg: err.message,
     });
@@ -195,21 +179,58 @@ const checkOut = async (req, res) => {
     });
 
     if (callValidate.status === "success") {
-      let userPendingOrder = await Order.findUserPending(user);
-      userPendingOrder.paymentRecieve = true;
-      await userPendingOrder.save();
+      const orderUpdate = await Order.updatePaymentStatus(user, true);
       return res.json({
         status: "success",
         msg: "payment made successfuly kindly wait for admin feed back",
+        order: orderUpdate,
       });
     }
-    res.json({
+    return res.json({
       status: `${callValidate.status}`,
       msg: `${callValidate.message}`,
       flutterWaveRes: callValidate,
     });
   } catch (err) {
-    res.json({
+    return res.json({
+      status: "error",
+      msg: err.message,
+    });
+  }
+};
+const testToken = (req, res) => {
+  return res.json({
+    msg: "testing",
+    foundUser: req.user,
+  });
+};
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const foundUser = await User.findOneByEmail(email);
+    if (foundUser) {
+      const validatePassword = await foundUser.isPasswordValid(password);
+      console.log("isPasswordValid:", validatePassword);
+      if (validatePassword) {
+        return res.json({
+          status: "success",
+          msg: "Login successfuly",
+          token: User.signToken(foundUser),
+        });
+      } else {
+        return res.json({
+          status: "falied",
+          msg: "password not currect",
+        });
+      }
+    } else {
+      return res.json({
+        status: "failed",
+        msg: "no user with this email try signin up",
+      });
+    }
+  } catch (err) {
+    return res.json({
       status: "error",
       msg: err.message,
     });
@@ -221,4 +242,5 @@ module.exports = {
   profile,
   placeOrder,
   checkOut,
+  testToken,
 };

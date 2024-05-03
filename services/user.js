@@ -5,6 +5,9 @@ const jwt = require("jsonwebtoken");
 const findById = async (id) => {
   try {
     const user = await User.findById(id);
+    if (!user) {
+      return false;
+    }
     let foundUser = {
       _id: user._id,
       firstname: user.firstname,
@@ -27,13 +30,6 @@ const findById = async (id) => {
 const findOneByEmail = async (email) => {
   try {
     const user = await User.findOne({ email: email });
-    // if (!user) {
-    //   const noUser = {
-    //     status: "error",
-    //     msg: "no user found",
-    //   };
-    //   return noUser;
-    // }
 
     return user;
   } catch (err) {
@@ -83,15 +79,12 @@ const create = async (
 };
 
 const signToken = (user) => {
-  return jwt.sign(
-    {
-      iss: "Danilo",
-      sub: user._id,
-      iat: new Date().getTime(), //current time
-      exp: new Date().setDate(new Date().getDate() + 1), // current time plus 1 day ahead
-    },
-    jwt_secret
-  );
+  const payload = {
+    user: user._id,
+    email: user.email,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 2,
+  };
+  return jwt.sign(payload, jwt_secret);
 };
 
 module.exports = {
