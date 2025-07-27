@@ -1,5 +1,7 @@
+// Import product model
 const Product = require("../model/product.js");
 
+// Initialize product with default values
 const productInit = async () => {
   try {
     const product = await Product.create({
@@ -18,6 +20,8 @@ const productInit = async () => {
     return error;
   }
 };
+
+// Get main product information
 const index = async () => {
   try {
     const product = await Product.findOne({ account: "main" });
@@ -31,6 +35,8 @@ const index = async () => {
     return error;
   }
 };
+
+// Get current Naira exchange rate
 const nairaRate = async () => {
   try {
     const product = await Product.findOne({ account: "main" });
@@ -44,6 +50,8 @@ const nairaRate = async () => {
     return error;
   }
 };
+
+// Get available dollar balance
 const availableDollarBalance = async () => {
   try {
     const product = await Product.findOne({ account: "main" });
@@ -58,6 +66,7 @@ const availableDollarBalance = async () => {
   }
 };
 
+// Update the Naira exchange rate
 const changeNairaRate = async (rate) => {
   try {
     const product = await Product.findOne({ account: "main" });
@@ -73,6 +82,8 @@ const changeNairaRate = async (rate) => {
     return error;
   }
 };
+
+// Update locked dollar balance (add or remove)
 const updateLockBalance = async (amount, update) => {
   try {
     if (update === "add") {
@@ -96,6 +107,8 @@ const updateLockBalance = async (amount, update) => {
     return error;
   }
 };
+
+// Update available dollar balance (add or remove)
 const updateDollarBalance = async (amount, update) => {
   try {
     if (update === "add") {
@@ -119,6 +132,8 @@ const updateDollarBalance = async (amount, update) => {
     return error;
   }
 };
+
+// Export all product service functions
 module.exports = {
   productInit,
   index,

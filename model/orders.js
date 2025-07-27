@@ -1,35 +1,37 @@
+// Import mongoose
 const mongoose = require("mongoose");
-
 const { Schema } = mongoose;
 
+// Define order schema for dollar exchange orders
 const orderSchema = new Schema(
   {
-    user: { type: Schema.Types.ObjectId, ref: "user" },
+    user: { type: Schema.Types.ObjectId, ref: "user" }, // Reference to user who placed order
     amountInDollar: {
       type: Number,
-      required: true,
+      required: true, // Dollar amount being purchased
     },
     amountInNaira: {
       type: Number,
-      required: true,
+      required: true, // Naira amount to be paid
     },
     orderStatus: {
       type: String,
-      default: "pending",
+      default: "pending", // Order status (pending, completed, failed)
     },
     paymentRecieve: {
       type: Boolean,
-      default: false,
+      default: false, // Whether payment has been received
     },
-    paymentId: { type: String, required: true },
-    paymentFlw_ref: { type: String, required: true },
-    paymentTx_ref: { type: String, required: true },
+    paymentId: { type: String, required: true }, // Payment gateway ID
+    paymentFlw_ref: { type: String, required: true }, // Flutterwave reference
+    paymentTx_ref: { type: String, required: true }, // Transaction reference
   },
   {
-    timestamps: true,
+    timestamps: true, // Automatically add createdAt and updatedAt
   }
 );
 
+// Create and export order model
 const order = mongoose.model("order ", orderSchema);
 
 module.exports = order;

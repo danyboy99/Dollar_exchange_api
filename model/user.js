@@ -1,6 +1,9 @@
+// Import required packages
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 const bcrypt = require("bcrypt");
+
+// Define user schema
 const userSchema = new Schema({
   firstname: {
     type: String,
@@ -27,6 +30,7 @@ const userSchema = new Schema({
   },
 });
 
+// Hash password before saving user
 userSchema.pre("save", async function (next) {
   try {
     const salt = await bcrypt.genSalt(10);
@@ -38,6 +42,7 @@ userSchema.pre("save", async function (next) {
   }
 });
 
+// Method to validate password
 userSchema.method("isPasswordValid", async function (Password) {
   try {
     return await bcrypt.compare(Password, this.password);
@@ -46,6 +51,7 @@ userSchema.method("isPasswordValid", async function (Password) {
   }
 });
 
+// Create and export user model
 const user = mongoose.model("user", userSchema);
 
 module.exports = user;

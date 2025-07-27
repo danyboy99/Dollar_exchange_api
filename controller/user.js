@@ -1,3 +1,4 @@
+// Import required services and validations
 const User = require("../services/user.js");
 const Order = require("../services/orders.js");
 const Product = require("../services/product.js");
@@ -9,16 +10,24 @@ const {
   flutterwavePublicKey,
   flutterwaveSecretKey,
 } = require("../config/keys.js");
+
+// Initialize Flutterwave instance
 const flw = new flutterWave(flutterwavePublicKey, flutterwaveSecretKey);
+
+// Handle user registration
 const signUp = async (req, res) => {
   try {
+    // Extract user data from request body
     const { firstname, lastname, username, email, profilepic, password } =
       req.body;
+
+    // Validate input data
     const { error, isValid } = validateSignupInput(req.body);
-    // check validation
     if (!isValid) {
       return res.status(400).json(error);
     }
+
+    // Check if user already exists
     const userAlreadyExist = await User.findOneByEmail(email);
     if (userAlreadyExist) {
       return res.json({
@@ -27,6 +36,7 @@ const signUp = async (req, res) => {
       });
     }
 
+    // Create new user
     const createdUser = await User.create(
       firstname,
       lastname,
@@ -39,6 +49,7 @@ const signUp = async (req, res) => {
       return res.json(createdUser);
     }
 
+    // Generate JWT token and return success response
     const signToken = User.signToken(createdUser);
     return res.json({
       status: "success",
@@ -53,6 +64,7 @@ const signUp = async (req, res) => {
   }
 };
 
+// Get user profile information
 const profile = async (req, res) => {
   const user = await User.findById(req.user._id);
   return res.json({
@@ -61,13 +73,17 @@ const profile = async (req, res) => {
     user: user,
   });
 };
+
+// Handle dollar purchase order placement
 const placeOrder = async (req, res) => {
   try {
+    // Validate payment input data
     const { error, isValid } = validatePaymentInput(req.body);
-    // check validation
     if (!isValid) {
       return res.status(400).json(error);
     }
+
+    // Extract payment details from request
     const {
       card_number,
       card_cvv,
@@ -79,7 +95,8 @@ const placeOrder = async (req, res) => {
       amount,
     } = req.body;
     const user = req.user;
-    //check if the requested amount is not more than the available balance
+
+    // Check if requested amount doesn't exceed available balance
     const availableBalance = await Product.availableDollarBalance();
     if (amount > availableBalance) {
       return res.json({
@@ -87,7 +104,8 @@ const placeOrder = async (req, res) => {
         msg: "requested amount is grater than the avaliable amount try lesser amount",
       });
     }
-    // check if user have a pending order
+
+    // Check if user has pending orders
     const userPendingOrder = await Order.findUserPending(user);
     if (userPendingOrder) {
       return res.json({
@@ -96,7 +114,11 @@ const placeOrder = async (req, res) => {
         order: userPendingOrder,
       });
     }
+
+    // Generate transaction reference
     const tx_ref = "02" + Math.floor(Math.random() * 1000000000 + 1);
+
+    // Prepare payment payload for Flutterwave
     const payload = {
       card_number: card_number,
       cvv: card_cvv,
@@ -112,20 +134,26 @@ const placeOrder = async (req, res) => {
       tx_ref,
     };
 
+    // Initiate card charge with Flutterwave
     const initiateCardCharge = await flw.Charge.card(payload);
 
+    // Handle PIN authorization mode
     if (initiateCardCharge.meta.authorization.mode === "pin") {
       let payload2 = payload;
       payload2.authorization = {
         mode: "pin",
         pin: card_pin,
       };
-      const reCallCharge = await flw.Charge.card(payload2);
-      //if failed
 
+      // Retry charge with PIN
+      const reCallCharge = await flw.Charge.card(payload2);
+
+      // Extract payment details
       let paymentId = reCallCharge.data.id;
       let paymentTx_ref = reCallCharge.data.tx_ref;
       let paymentFlw_ref = reCallCharge.data.flw_ref;
+
+      // Calculate Naira amount and create order
       const nairaRate = await Product.nairaRate();
       const amountInNaira = amount * nairaRate;
       await Order.create(
@@ -136,8 +164,11 @@ const placeOrder = async (req, res) => {
         paymentFlw_ref,
         paymentTx_ref
       );
+
+      // Update product balances
       await Product.updateDollarBalance(amount, "remove");
       await Product.updateLockBalance(amount, "add");
+
       return res.json({
         status: "pending",
         msg: `${reCallCharge.data.processor_response}`,
@@ -145,6 +176,7 @@ const placeOrder = async (req, res) => {
       });
     }
 
+    // Handle redirect authorization mode
     if (initiateCardCharge.meta.authorization.mode === "redirect") {
       return res.json({
         status: "pending",
@@ -164,20 +196,25 @@ const placeOrder = async (req, res) => {
     });
   }
 };
+// Handle checkout with OTP validation
 const checkOut = async (req, res) => {
   try {
+    // Validate checkout input
     const { error, isValid } = checkoutInput(req.body);
-    // check validation
     if (!isValid) {
       return res.status(400).json(error);
     }
+
     const user = req.user;
     const { otp, flw_ref } = req.body;
+
+    // Validate OTP with Flutterwave
     const callValidate = await flw.Charge.validate({
       otp: otp,
       flw_ref: flw_ref,
     });
 
+    // If validation successful, update order payment status
     if (callValidate.status === "success") {
       const orderUpdate = await Order.updatePaymentStatus(user, true);
       return res.json({
@@ -186,6 +223,7 @@ const checkOut = async (req, res) => {
         order: orderUpdate,
       });
     }
+
     return res.json({
       status: `${callValidate.status}`,
       msg: `${callValidate.message}`,
@@ -198,19 +236,25 @@ const checkOut = async (req, res) => {
     });
   }
 };
+
+// Test token validity endpoint
 const testToken = (req, res) => {
   return res.json({
     msg: "testing",
     foundUser: req.user,
   });
 };
+
+// Handle user login
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Find user by email
     const foundUser = await User.findOneByEmail(email);
     if (foundUser) {
+      // Validate password
       const validatePassword = await foundUser.isPasswordValid(password);
-      console.log("isPasswordValid:", validatePassword);
       if (validatePassword) {
         return res.json({
           status: "success",
@@ -236,6 +280,8 @@ const login = async (req, res) => {
     });
   }
 };
+
+// Export all controller functions
 module.exports = {
   signUp,
   login,

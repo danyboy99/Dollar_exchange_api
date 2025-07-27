@@ -1,6 +1,8 @@
+// Import required models
 const Order = require("../model/orders.js");
 const Product = require("../model/product.js");
 
+// Create new order
 const create = async (
   user,
   amountInDollar,
@@ -28,6 +30,8 @@ const create = async (
     return error;
   }
 };
+
+// Find order by user
 const findByUser = async (user) => {
   try {
     const userOrder = await Order.findOne({ user: user });
@@ -41,6 +45,8 @@ const findByUser = async (user) => {
     return error;
   }
 };
+
+// Find user's pending order
 const findUserPending = async (user) => {
   try {
     const userOrder = await Order.findOne({
@@ -57,6 +63,8 @@ const findUserPending = async (user) => {
     return error;
   }
 };
+
+// Find all pending orders
 const findPendingOrders = async () => {
   try {
     const userOrders = await Order.find({
@@ -72,6 +80,8 @@ const findPendingOrders = async () => {
     return error;
   }
 };
+
+// Delete user's unpaid order
 const deleteOrder = async (user) => {
   try {
     await Order.findOneAndDelete({ user: user, paymentRecieve: false }).then(
@@ -91,6 +101,8 @@ const deleteOrder = async (user) => {
     return error;
   }
 };
+
+// Find all orders
 const findAllOrders = async () => {
   try {
     const orders = await Order.find();
@@ -104,6 +116,8 @@ const findAllOrders = async () => {
     return error;
   }
 };
+
+// Update order status (pending, success, failed)
 const updateOrderStatus = async (user, update) => {
   try {
     const userPendingOrder = await Order.findOne({
@@ -122,6 +136,8 @@ const updateOrderStatus = async (user, update) => {
     return error;
   }
 };
+
+// Update payment received status
 const updatePaymentStatus = async (user, update) => {
   try {
     const userPendingOrder = await Order.findOne({
@@ -140,6 +156,8 @@ const updatePaymentStatus = async (user, update) => {
     return error;
   }
 };
+
+// Export all order service functions
 module.exports = {
   create,
   findByUser,

@@ -1,3 +1,4 @@
+// Utility function to check if a value is empty
 const isEmpty = (value) => {
   return (
     value === undefined ||
@@ -7,4 +8,5 @@ const isEmpty = (value) => {
   );
 };
 
+// Export isEmpty function
 module.exports = isEmpty;

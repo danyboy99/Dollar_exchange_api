@@ -1,3 +1,4 @@
+// Import required services and validations
 const Admin = require("../services/admin.js");
 const Product = require("../services/product.js");
 const Order = require("../services/orders.js");
@@ -8,16 +9,21 @@ const {
   flutterwavePublicKey,
   flutterwaveSecretKey,
 } = require("../config/keys.js");
+
+// Initialize Flutterwave instance
 const flw = new flutterWave(flutterwavePublicKey, flutterwaveSecretKey);
 
-//signup route
+// Handle admin registration
 const signup = async (req, res) => {
   const { firstname, lastname, email, password } = req.body;
+
+  // Validate input data
   const { error, isValid } = validateSignupInput(req.body);
-  // check validation
   if (!isValid) {
     return res.status(400).json(error);
   }
+
+  // Check if admin already exists
   const adminAlreadyExist = await Admin.findOneByEmail(email);
   if (adminAlreadyExist) {
     return res.json({
@@ -26,11 +32,13 @@ const signup = async (req, res) => {
     });
   }
 
+  // Create new admin
   const createdAdmin = await Admin.create(firstname, lastname, email, password);
   if (createdAdmin.status === "error") {
     return res.json(createdAdmin);
   }
 
+  // Generate JWT token and return success response
   const signtoken = Admin.signToken(createdAdmin);
   return res.json({
     status: "success",
@@ -39,21 +47,25 @@ const signup = async (req, res) => {
   });
 };
 
+// Get admin profile information
 const profile = (req, res) => {
   res.json({
     msg: "admin profile",
     admin: req.user,
   });
 };
+// Add amount to available dollar balance
 const addToAvaliableBalance = async (req, res) => {
   try {
     const { amount } = req.body;
+
+    // Validate amount input
     const { error, errorStatus } = validateAmount(req.body);
-    // check validation
     if (errorStatus) {
       return res.status(400).json(error);
     }
 
+    // Update dollar balance by adding amount
     const balanceUpdate = await Product.updateDollarBalance(amount, "add");
     console.log("balance", balanceUpdate);
     res.json({
@@ -69,15 +81,19 @@ const addToAvaliableBalance = async (req, res) => {
     });
   }
 };
+
+// Remove amount from available dollar balance
 const removeFromAvaliableBalance = async (req, res) => {
   try {
     const { amount } = req.body;
+
+    // Validate amount input
     const { error, errorStatus } = validateAmount(req.body);
-    // check validation
     if (errorStatus) {
       return res.status(400).json(error);
     }
 
+    // Update dollar balance by removing amount
     Product.updateDollarBalance(amount, "remove").then((data) => {
       res.json({
         status: "success",
@@ -93,19 +109,22 @@ const removeFromAvaliableBalance = async (req, res) => {
     });
   }
 };
+
+// Change the Naira exchange rate
 const changeNairaRate = async (req, res) => {
   try {
     const { rate } = req.body;
-    //validate input
+
+    // Validate rate input (using amount validator)
     const validate = {
       amount: rate,
     };
     const { error, errorStatus } = validateAmount(validate);
-    // check validation
     if (errorStatus) {
       return res.status(400).json(error);
     }
 
+    // Update Naira rate
     Product.changeNairaRate(rate).then((data) => {
       res.json({
         status: "success",
@@ -121,6 +140,8 @@ const changeNairaRate = async (req, res) => {
     });
   }
 };
+
+// Get all pending orders
 const getPendingOrders = async (req, res) => {
   try {
     const orders = await Order.findPendingOrders();
@@ -133,22 +154,27 @@ const getPendingOrders = async (req, res) => {
     });
   }
 };
+// Approve a pending order after payment verification
 const approvePendingOrder = async (req, res) => {
   try {
     const { user } = req.body;
+
+    // Find user's pending order
     const userPendingOrder = await Order.findUserPending(user);
-    // if no pending order found
     if (!userPendingOrder) {
       return res.json({
         status: "fail",
         msg: "no pending orders for this user",
       });
     }
-    //validate payment
+
+    // Verify payment with Flutterwave
     const verifytransaction = await flw.Transaction.verify({
       id: userPendingOrder.paymentId,
     });
+
     if (verifytransaction.status == "success") {
+      // Remove amount from locked balance and approve order
       await Product.updateLockBalance(
         userPendingOrder.amountInDollar,
         "remove"
@@ -175,11 +201,14 @@ const approvePendingOrder = async (req, res) => {
     });
   }
 };
+
+// Decline a pending order and restore balances
 const declinePendingOrder = async (req, res) => {
   try {
     const { user } = req.body;
+
+    // Find user's pending order
     const userPendingOrder = await Order.findUserPending(user);
-    // if no pending order found
     if (!userPendingOrder) {
       return res.json({
         status: "fail",
@@ -187,6 +216,7 @@ const declinePendingOrder = async (req, res) => {
       });
     }
 
+    // Restore balances and decline order
     await Product.updateLockBalance(userPendingOrder.amountInDollar, "remove");
     await Product.updateDollarBalance(userPendingOrder.amountInDollar, "add");
     Order.updateOrderStatus(user, "failed").then((data) => {
@@ -204,6 +234,8 @@ const declinePendingOrder = async (req, res) => {
     });
   }
 };
+
+// Delete a pending order
 const deletePendingOrder = async (req, res) => {
   try {
     const { user } = req.body;
@@ -218,6 +250,8 @@ const deletePendingOrder = async (req, res) => {
     });
   }
 };
+
+// Get all orders (pending and completed)
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.findAllOrders();
@@ -230,14 +264,17 @@ const getAllOrders = async (req, res) => {
     });
   }
 };
+
+// Handle admin login
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Find admin by email
     const foundUser = await Admin.findOneByEmail(email);
-    console.log("found admin:", foundUser);
     if (foundUser) {
+      // Validate password
       const validatePassword = await foundUser.PasswordValid(password);
-      console.log("isPasswordValid:", validatePassword);
       if (validatePassword) {
         return res.json({
           status: "success",
@@ -263,12 +300,16 @@ const login = async (req, res) => {
     });
   }
 };
+
+// Test admin token validity
 const testToken = (req, res) => {
   return res.json({
     msg: "testing",
     foundUser: req.user,
   });
 };
+
+// Export all admin controller functions
 module.exports = {
   signup,
   login,

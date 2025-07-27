@@ -1,6 +1,10 @@
+// Import product service
 const Product = require("../services/product.js");
+
+// Initialize product with default values
 const initializeProduct = async (req, res) => {
   try {
+    // Initialize product in database
     const product = await Product.productInit();
 
     res.json({
@@ -17,6 +21,7 @@ const initializeProduct = async (req, res) => {
   }
 };
 
+// Export product controller functions
 module.exports = {
   initializeProduct,
 };
